@@ -137,7 +137,7 @@ def carts_to_orders(request, cart_id, *args, **kwargs):
     if ser.is_valid():
         cart = ser.save()
         return Response(
-            {'success': {'order': OrderSerializer(cart.order).data}},
+            OrderSerializer(cart.order).data,
             status=status.HTTP_200_OK,
         )
     return Response(
@@ -164,11 +164,7 @@ def update_orders(request, id, *args, **kwargs):
     )
     if ser.is_valid():
         updated_order = ser.save()
-        return Response({
-            'success': {
-                'orders': ser.data
-            }
-        }, status=status.HTTP_201_CREATED)
+        return Response(ser.data, status=status.HTTP_200_OK)
     return Response({
         "errors": ser.errors
     }, status=status.HTTP_400_BAD_REQUEST, )
@@ -236,14 +232,12 @@ def logged_user_all_carts(request, *args, **kwargs):
 def add_cart(request, *args, **kwargs):
     ser = CartCreateOrUpdateSeriralizer(
         data=request.data,
-        context={
-            'request': request
-        }
+        context={'request': request}
     )
     if ser.is_valid():
         cart = ser.save()
         return Response(
-            {'success': {'carts': CartItemListSerializer(cart).data}},
+            CartItemListSerializer(cart).data,
             status=status.HTTP_201_CREATED,
         )
     return Response({
@@ -270,9 +264,7 @@ def update_cart(request, id, *args, **kwargs):
     )
     if ser.is_valid():
         updated_cart = ser.save()
-        return Response({
-            "success": {'carts': CartItemListSerializer(updated_cart).data}
-        }, status=status.HTTP_201_CREATED,)
+        return Response(CartItemListSerializer(updated_cart).data, status=status.HTTP_200_OK,)
     return Response({
         "errors": ser.errors
     }, status=status.HTTP_400_BAD_REQUEST, )
@@ -299,9 +291,7 @@ def delete_cart_items(request, cart_id, item_id, *args, **kwargs):
     item.delete()
     # delete cart is no items is left
     if cart.items.count() > 0:
-        return Response({
-            'success': {'carts': CartItemListSerializer(cart).data}
-        }, status=status.HTTP_200_OK, )
+        return Response(CartItemListSerializer(cart).data, status=status.HTTP_200_OK, )
     cart.delete()
     return Response({
         'success': ['Cart is deleted successfully']

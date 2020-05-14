@@ -6,9 +6,11 @@ from .views import (
     register,
     login,
     update_profile,
+    get_profile,
 )
 
 urlpatterns = [
+    path('users/profile/', get_profile, name='get_profile'),
     path('users/all/', all_users, name='all_users'),
     path('histories/all/', all_histories, name='all_histories'),
     path('users/list/', list_users, name='list_users'),

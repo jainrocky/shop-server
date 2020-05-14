@@ -13,6 +13,7 @@ from rest_framework.authtoken.models import Token
 
 from products.models import Product
 from products.serializers import ProductSerializer
+# from orders.serializers import OrderSerializer
 
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -37,13 +38,15 @@ class UserSerializer(DynamicFieldsModelSerializer):
         phone = validated_data.get('phone', None)
         password = validated_data.get('password', None)
         email = validated_data.get('email', None)
+        is_admin = validated_data.get('is_admin', None)
+
         user = User.objects.create_user(phone, email, password)
         return user
 
     class Meta:
         model = User
         fields = ['id', 'phone', 'password',
-                  'email', 'created', 'modified', 'token']
+                  'email', 'created', 'modified', 'token', 'is_admin', 'is_active']
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -59,8 +62,12 @@ class UserProfileSerializer(DynamicFieldsModelSerializer):
     fav_products = ProductSerializer(fields=('id', 'name', 'primary_image'),
                                      read_only=True,
                                      many=True,)
+    is_active = serializers.SerializerMethodField()
+    is_admin = serializers.SerializerMethodField()
+    orders = serializers.SerializerMethodField()
     # write only fields
-    fav_products_id = serializers.JSONField(
+    active = serializers.BooleanField(write_only=True, )
+    add_fav_products = serializers.JSONField(
         write_only=True,
         default=None,
         validators=[positive_integers_list_validator, ]
@@ -83,9 +90,19 @@ class UserProfileSerializer(DynamicFieldsModelSerializer):
     def get_id(self, instance, *args, **kwargs):
         return instance.user.id
 
+    def get_is_active(self, instance, *args, **kwargs):
+        return instance.user.is_active
+
+    def get_is_admin(self, instance, *args, **kwargs):
+        return instance.user.is_admin
+
+    def get_orders(self, instance, *args, **kwargs):
+        from orders.serializers import OrderSerializer
+        return OrderSerializer(instance.user.orders, many=True).data
+
     def update(self, instance, validated_data, *args, **kwargs):
         atleast_one_field_validator(self.fields, validated_data)
-        fav_products_id = validated_data.get('fav_products_id', [])
+        add_fav_products = validated_data.get('add_fav_products', [])
         delete_fav_products = validated_data.get('delete_fav_products', None)
         avatar = validated_data.get('avatar', None)
 
@@ -108,21 +125,23 @@ class UserProfileSerializer(DynamicFieldsModelSerializer):
             'instagram', instance.instagram)
         instance.facebook = validated_data.get('facebook', instance.facebook)
         instance.twitter = validated_data.get('twitter', instance.twitter)
+
+        # changes made on 29-04-2020 start
+        instance.user.is_admin = validated_data.get(
+            'is_admin', instance.user.is_admin)
+        instance.user.is_active = validated_data.get(
+            'active', instance.user.is_active)
+        # changes made on 29-04-2020 end
+
         if avatar:
             instance.avatar.delete(save=False)
             instance.avatar = avatar
+        if add_fav_products:
+            fav_products = Product.objects.filter(id__in=add_fav_products)
+            instance.fav_products.add(*fav_products)
         if delete_fav_products:
             favs = Product.objects.filter(id__in=delete_fav_products)
             instance.fav_products.remove(*favs)
-            # for fav_id in delete_fav_products:
-            #     try:
-            #         product = Product.objects.get(id=fav_id)
-            #         instance.fav_products.remove(product)
-            #     except:
-            #         pass
-        if fav_products_id:
-            fav_products = Product.objects.filter(id__in=fav_products_id)
-            instance.fav_products.add(*fav_products)
         instance.save()
         return instance
 

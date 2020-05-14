@@ -101,7 +101,7 @@ def all_objects(request, object):
 
 # products/objects/<int: id>/
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, ])
+# @permission_classes([I, ])
 def objects(request, object, id):
     serializer_class, model = get_serializer_and_model_or_404(object)
     try:
@@ -116,15 +116,15 @@ def objects(request, object, id):
     try:
         query_set = model.objects.get(id=id)
         # save to history.
-        if object == 'products':
-            history = UserHistory(
-                user=request.user,
-                product=query_set,
-                source=request.GET.get('source', None),
-                lat=request.GET.get('lat', None),
-                lon=request.GET.get('lon', None),
-            )
-            history.save()
+        # if object == 'products':
+        #     history = UserHistory(
+        #         user=request.user,
+        #         product=query_set,
+        #         source=request.GET.get('source', None),
+        #         lat=request.GET.get('lat', None),
+        #         lon=request.GET.get('lon', None),
+        #     )
+        #     history.save()
     except ObjectDoesNotExist:
         return Response({
             "errors": {
@@ -138,7 +138,7 @@ def objects(request, object, id):
 
 # products/objects/search/
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, ])
+# @permission_classes([IsAuthenticated, ])
 def search_objects(request, object):
     serializer_class, model = get_serializer_and_model_or_404(object)
     paginator = PageNumberPagination()
@@ -189,13 +189,13 @@ def search_objects(request, object):
     if True:
         valid_fields = avail.intersection(kwargs.keys())
         for field in valid_fields:
+            if not kwargs[field]:
+                continue
             lookup = None
             if field in related_fields_lookup[object]:
                 lookup = related_fields_lookup[object][field]
             else:
                 lookup = "%s__icontains" % field
-            if not kwargs[field]:
-                continue
             if Q_set:
                 Q_set |= Q(**{lookup: kwargs[field]})
             else:
@@ -258,6 +258,7 @@ def list_objects(request, object):
 @api_view(['POST'])
 @permission_classes([IsAdminUser, ])
 def add_objects(request, object):
+    # print(request.FILES.get('primary_image', None).content_type)
     serializer_class, model = get_serializer_and_model_or_404(object)
     serializer = serializer_class(
         data=request.data, context={'request': request})

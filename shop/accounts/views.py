@@ -51,9 +51,7 @@ def login(request,):
                     "errors": ['Invalid password.']
                 }, status=status.HTTP_401_UNAUTHORIZED, )
             serializer = UserSerializer(user)
-            return Response({
-                "success": serializer.data
-            }, status=status.HTTP_200_OK, )
+            return Response(serializer.data, status=status.HTTP_200_OK, )
         except:
             return Response({
                 "errors": ['Invalid phone.']
@@ -71,16 +69,29 @@ def register(request, ):
         data=request.data, context={'request': request})
     if serializer.is_valid(raise_exception=False):
         new_record = serializer.save()
-        return Response({
-            "success": serializer_class(new_record).data
-        })
+        return Response(serializer_class(new_record).data)
     return Response({
         "errors": serializer.errors
     }, status=status.HTTP_400_BAD_REQUEST, )
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_profile(request, ):
+    raw_fields = request.GET.get(EXTRA_PARAMS['FIELDS'], None)
+    try:
+        fields = process_fields_query(raw_fields)
+    except JSONDecodeError:
+        return Response({
+            'errors': {
+                'fields': ['Value must be valid JSON.']
+            }
+        }, status=status.HTTP_400_BAD_REQUEST,)
+    return Response(UserProfileSerializer(request.user.profile).data)
+
 # /users/all?fields=&sort=
 # /histories/all?fields=&sort=
+
 
 @api_view(['GET', ])
 @permission_classes([IsAdminUser, ])
@@ -170,9 +181,7 @@ def update_profile(request, ):
         request.user.profile, data=request.data, partial=True, context={'request': request})
     if serializer.is_valid():
         updated_record = serializer.save()
-        return Response({
-            "success": serializer_class(updated_record).data
-        })
+        return Response(serializer_class(updated_record).data, status=status.HTTP_200_OK)
     return Response({
         "errors": serializer.errors
     }, status=status.HTTP_400_BAD_REQUEST, )

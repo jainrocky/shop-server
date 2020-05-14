@@ -8,6 +8,7 @@ from django.utils import timezone
 from rest_framework.authtoken.models import Token
 import json
 
+from django.core.validators import RegexValidator
 from products.models import Product
 from .utils import profile_image_upload_to
 
@@ -36,10 +37,10 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser):
-    phone = PhoneField(unique=True, verbose_name='User Phone')
+    phone = PhoneField(unique=True, verbose_name='User Phone', validators=(RegexValidator(
+        regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+919999999999'."),))
     email = models.EmailField(
-        verbose_name='User Email', null=True,)
-
+        verbose_name='User Email', null=True, unique=True)
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
     created = models.DateTimeField(
@@ -56,7 +57,7 @@ class User(AbstractBaseUser):
         return super(User, self).save(*args, **kwargs)
 
     def __str__(self):
-        return str(self.phone) + ' ' + self.profile.full_name
+        return str(self.phone)
 
     def has_perm(self, perm, obj=None):
         return True
@@ -72,12 +73,13 @@ class User(AbstractBaseUser):
 class UserProfile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
-    full_name = models.CharField(max_length=60, verbose_name='Full Name')
+    full_name = models.CharField(
+        max_length=60, verbose_name='Full Name', null=True)
     gender = models.CharField(max_length=8, choices=(
         ('male', 'Male'),
         ('female', 'Female'),
         ('others', 'Others'),
-    ), null=True, verbose_name='Gender')
+    ), null=True, verbose_name='Gender', blank=True)
     birth_date = models.CharField(
         max_length=40, null=True, verbose_name='Date of Birth')
     avatar = models.ImageField(
@@ -128,8 +130,8 @@ class UserProfile(models.Model):
             self.created = timezone.now()
         return super(UserProfile, self).save(*args, **kwargs)
 
-    def __str__(self):
-        return str(self.full_name)+' '+str(self.birth_date)
+    # def __str__(self):
+    #     return str(self.full_name)+' '+str(self.birth_date)
 
 
 class UserHistory(models.Model):

@@ -226,11 +226,10 @@ class ProductSerializer(DynamicFieldsModelSerializer):
     offers = OfferSerializer(many=True, read_only=True,
                              fields=('id', 'images', 'name', 'start',
                                      'end', 'given_by', 'active', 'off_amount',
-                                     'off_percent', 'off_upto', 'min_amount', 'min_qty',))
+                                     'off_percent', 'off_upto', 'min_amount', 'min_qty', 'max_qty   '))
     likes = serializers.SerializerMethodField()
 # write only fields
     add_category = serializers.IntegerField(write_only=True,)
-    add_offers = serializers.JSONField(write_only=True, default=None, )
     add_manufacturer = serializers.IntegerField(write_only=True, )
     add_images = serializers.ListField(
         child=serializers.ImageField(),
@@ -247,6 +246,7 @@ class ProductSerializer(DynamicFieldsModelSerializer):
         default=None,
         validators=(positive_integers_list_validator, )
     )
+    add_offers = serializers.JSONField(write_only=True, default=None, )
     remove_offers = serializers.JSONField(
         write_only=True,
         default=None,

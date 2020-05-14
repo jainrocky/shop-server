@@ -97,7 +97,6 @@ class OrderSerializer(DynamicFieldsModelSerializer):
         instance.status = validated_data.get('status', instance.status)
         if hasattr(instance, 'order') and not instance.status == 'saved':
             Cart.objects.filter(id=instance.cart.id).update(order=None)
-
         instance.save()
         return instance
 
@@ -115,7 +114,9 @@ class CartToOrderSerializer(DynamicFieldsModelSerializer):
         fields = ['charges']
 
     def update(self, instance, validated_data, *args, **kwargs):
+        # BUG: overriding old orders from same cart
         if instance.order:
+            # if in any there is any previous unsuccessful cart to order request.
             # delete previous order if associate with this cart
             instance.order.products.all().delete()
             instance.order.delete()
@@ -123,7 +124,7 @@ class CartToOrderSerializer(DynamicFieldsModelSerializer):
         fp_products = []
         order_data = {
             'user': self.context['request'].user,
-            'charges': validated_data.get('charges', 0.0),
+            'charges': validated_data.get('charges', (0.0)),
             'status': 'saved'
         }
         order_data['amt_by_mrp'] = sum(
@@ -174,8 +175,9 @@ class CartToOrderSerializer(DynamicFieldsModelSerializer):
         order_data['discount_sum'] = sum(
             [fp.discount for fp in fp_products]
         )
-        order_data['amount'] = round(order_data['amt_by_price'] + order_data['charges'] -
-                                     order_data['discount_sum'], 4)
+        order_data['amount'] = Decimal(order_data['amt_by_price']) + \
+            Decimal(order_data['charges']) - \
+            Decimal(order_data['discount_sum'])
         order = Order.objects.create(**order_data)
         order.products.add(*fp_products)
         order.save()
@@ -200,7 +202,7 @@ class CartItemListSerializer(DynamicFieldsModelSerializer):
 
     class Meta:
         model = Cart
-        fields = ['id', 'items', ]
+        fields = ['id', 'items', 'active', 'created', 'modified']
 
 
 class CartCreateOrUpdateSeriralizer(DynamicFieldsModelSerializer):
@@ -273,7 +275,5 @@ class CartCreateOrUpdateSeriralizer(DynamicFieldsModelSerializer):
             cart=instance, product__id=product_id,
             defaults=validated_data
         )
+        instance.save()
         return instance
-
-# crio workspace
-# This is your workspace URL: jainrocky1008-tozk.ws.crio.do
